@@ -37,6 +37,36 @@
   --glow: rgba(255, 201, 60, 0.35);
 }
 
+.app[data-theme="green"] {
+  --glass: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-hover: rgba(255, 255, 255, 0.17);
+  --bg-a: #8fe0a0;
+  --bg-b: #2f9a4c;
+  --bg-c: #0c3519;
+  --glow: rgba(255, 214, 102, 0.42);
+}
+
+.app[data-theme="red"] {
+  --glass: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-hover: rgba(255, 255, 255, 0.17);
+  --bg-a: #ff8f80;
+  --bg-b: #c7362e;
+  --bg-c: #3d0b09;
+  --glow: rgba(255, 214, 102, 0.4);
+}
+
+.app[data-theme="violet"] {
+  --glass: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-hover: rgba(255, 255, 255, 0.17);
+  --bg-a: #c9a0ff;
+  --bg-b: #7a3fc9;
+  --bg-c: #230b42;
+  --glow: rgba(255, 214, 102, 0.42);
+}
+
 /* ---------- Layout ---------- */
 .app {
   position: relative;
