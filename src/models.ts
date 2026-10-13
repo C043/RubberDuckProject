@@ -28,6 +28,7 @@ export const MODELS: DuckModel[] = [
     source: "https://sketchfab.com/3d-models/rubber-duck-7eb15f3c897049f8ba35f8f56f081dff",
     license: "CC BY-NC 4.0",
     forceOpaque: true,
+    followYaw: -30,
   },
   {
     id: "ducky",
