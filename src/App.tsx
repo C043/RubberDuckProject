@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from "re
 import { Canvas } from "@react-three/fiber";
 import { CameraControls, useProgress } from "@react-three/drei";
 import { Scene } from "./components/Scene";
-import { getDefaultPosition, MAX_DISTANCE, MIN_DISTANCE } from "./camera";
+import { getDefaultPosition, MAX_DISTANCE, MIN_DISTANCE, type MotionMode } from "./camera";
 import { THEMES } from "./themes";
 import "./App.css";
 
@@ -22,11 +22,10 @@ function Loader() {
 
 function App() {
   const controlsRef = useRef<CameraControls | null>(null);
-  const [autoRotate, setAutoRotate] = useState(true);
+  const [mode, setMode] = useState<MotionMode>("spin");
   const [themeId, setThemeId] = useState(THEMES[0].id);
   const [defaultPosition] = useState(getDefaultPosition);
-  const defaultDistance = Math.hypot(...defaultPosition);
-  const [distance, setDistance] = useState(defaultDistance);
+  const [distance, setDistance] = useState(() => Math.hypot(...defaultPosition));
   const theme = THEMES.find((t) => t.id === themeId) ?? THEMES[0];
 
   const onZoomChange = useCallback((d: number) => {
@@ -40,7 +39,14 @@ function App() {
     controls.dollyTo(target, true);
   }, []);
 
+  const toggleMode = useCallback((m: Exclude<MotionMode, null>) => {
+    setMode((current) => (current === m ? null : m));
+  }, []);
+
+  const stopModes = useCallback(() => setMode(null), []);
+
   const reset = useCallback(() => {
+    setMode(null);
     controlsRef.current?.setLookAt(...getDefaultPosition(), 0, 0, 0, true);
   }, []);
 
@@ -52,15 +58,16 @@ function App() {
       else if (e.key.toLowerCase() === "r") reset();
       else if (e.key === " ") {
         e.preventDefault();
-        setAutoRotate((v) => !v);
-      } else return;
+        toggleMode("spin");
+      } else if (e.key.toLowerCase() === "f") toggleMode("follow");
+      else return;
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [zoom, reset]);
+  }, [zoom, reset, toggleMode]);
 
-  // Map camera distance to a 0–100 scale for the zoom meter (closer = higher).
-  const zoomPct = Math.round(((MAX_DISTANCE - distance) / (MAX_DISTANCE - MIN_DISTANCE)) * 100);
+  const atMinZoom = distance >= MAX_DISTANCE - 0.01;
+  const atMaxZoom = distance <= MIN_DISTANCE + 0.01;
 
   return (
     <div className="app" data-theme={theme.id}>
@@ -73,7 +80,13 @@ function App() {
         camera={{ position: defaultPosition, fov: 40 }}
         gl={{ antialias: true }}
       >
-        <Scene controlsRef={controlsRef} autoRotate={autoRotate} theme={theme} onZoomChange={onZoomChange} />
+        <Scene
+          controlsRef={controlsRef}
+          mode={mode}
+          theme={theme}
+          onZoomChange={onZoomChange}
+          onDragStart={stopModes}
+        />
       </Canvas>
 
       <Loader />
@@ -111,30 +124,38 @@ function App() {
 
       <footer className="hud hud--bottom">
         <p className="hint">
-          <kbd>Drag</kbd> rotate · <kbd>Scroll</kbd> zoom · <kbd>R</kbd> reset
+          <kbd>Drag</kbd> rotate · <kbd>Scroll</kbd> zoom · <kbd>F</kbd> follow · <kbd>R</kbd> reset
         </p>
 
         <div className="dock">
-          <button className="dock__btn" onClick={() => zoom(-1)} aria-label="Zoom out" disabled={zoomPct <= 0}>
+          <button className="dock__btn" onClick={() => zoom(-1)} aria-label="Zoom out" title="Zoom out (-)" disabled={atMinZoom}>
             <svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg>
           </button>
-          <div className="meter" aria-label={`Zoom ${zoomPct}%`}>
-            <div className="meter__fill" style={{ width: `${Math.max(0, Math.min(100, zoomPct))}%` }} />
-            <span>{(defaultDistance / distance).toFixed(1)}×</span>
-          </div>
-          <button className="dock__btn" onClick={() => zoom(1)} aria-label="Zoom in" disabled={zoomPct >= 100}>
+          <button className="dock__btn" onClick={() => zoom(1)} aria-label="Zoom in" title="Zoom in (+)" disabled={atMaxZoom}>
             <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14" /></svg>
           </button>
           <span className="dock__sep" />
-          <button
-            className={`dock__btn ${autoRotate ? "dock__btn--on" : ""}`}
-            onClick={() => setAutoRotate((v) => !v)}
-            aria-pressed={autoRotate}
-            aria-label="Toggle auto-rotate"
-            title="Auto-rotate (Space)"
-          >
-            <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" /></svg>
-          </button>
+          <div className="modes" role="group" aria-label="Motion mode">
+            <button
+              className={`dock__btn ${mode === "spin" ? "dock__btn--on dock__btn--spin" : ""}`}
+              onClick={() => toggleMode("spin")}
+              aria-pressed={mode === "spin"}
+              aria-label="Auto-rotate"
+              title="Auto-rotate (Space)"
+            >
+              <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66M20 4v5h-5" /></svg>
+            </button>
+            <button
+              className={`dock__btn ${mode === "follow" ? "dock__btn--on" : ""}`}
+              onClick={() => toggleMode("follow")}
+              aria-pressed={mode === "follow"}
+              aria-label="Follow mouse"
+              title="Follow mouse (F)"
+            >
+              <svg viewBox="0 0 24 24"><path d="M5 3l6 16 2.2-6.8L20 10z" /></svg>
+            </button>
+          </div>
+          <span className="dock__sep" />
           <button className="dock__btn" onClick={reset} aria-label="Reset view" title="Reset view (R)">
             <svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3" /><circle cx="12" cy="12" r="4" /></svg>
           </button>

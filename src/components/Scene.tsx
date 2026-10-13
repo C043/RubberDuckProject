@@ -3,13 +3,15 @@ import { useFrame } from "@react-three/fiber";
 import { CameraControls, ContactShadows, Environment, Lightformer } from "@react-three/drei";
 import { Duck } from "./Duck";
 import type { Theme } from "../themes";
+import type { MotionMode } from "../camera";
 import { MAX_DISTANCE, MIN_DISTANCE } from "../camera";
 
 interface SceneProps {
   controlsRef: RefObject<CameraControls | null>;
-  autoRotate: boolean;
+  mode: MotionMode;
   theme: Theme;
   onZoomChange: (distance: number) => void;
+  onDragStart: () => void;
 }
 
 function AutoRotate({ controlsRef, enabled }: { controlsRef: SceneProps["controlsRef"]; enabled: boolean }) {
@@ -21,7 +23,7 @@ function AutoRotate({ controlsRef, enabled }: { controlsRef: SceneProps["control
   return null;
 }
 
-export function Scene({ controlsRef, autoRotate, theme, onZoomChange }: SceneProps) {
+export function Scene({ controlsRef, mode, theme, onZoomChange, onDragStart }: SceneProps) {
   return (
     <>
       <ambientLight intensity={0.4} />
@@ -36,7 +38,7 @@ export function Scene({ controlsRef, autoRotate, theme, onZoomChange }: ScenePro
       </Environment>
 
       <Suspense fallback={null}>
-        <Duck />
+        <Duck follow={mode === "follow"} />
       </Suspense>
 
       <ContactShadows position={[0, -1.25, 0]} opacity={theme.shadowOpacity} scale={8} blur={2.6} far={3} color={theme.shadow} />
@@ -50,8 +52,10 @@ export function Scene({ controlsRef, autoRotate, theme, onZoomChange }: ScenePro
         smoothTime={0.35}
         truckSpeed={0}
         onChange={() => controlsRef.current && onZoomChange(controlsRef.current.distance)}
+        // Fires for pointer/touch drags only (wheel zoom doesn't emit it).
+        onStart={onDragStart}
       />
-      <AutoRotate controlsRef={controlsRef} enabled={autoRotate} />
+      <AutoRotate controlsRef={controlsRef} enabled={mode === "spin"} />
     </>
   );
 }

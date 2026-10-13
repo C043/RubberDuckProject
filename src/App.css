@@ -256,8 +256,22 @@
   background: linear-gradient(160deg, #ffd666, var(--duck));
 }
 
-.dock__btn--on svg {
+.dock__btn--spin svg {
   animation: spin 3s linear infinite;
+}
+
+.modes {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.modes .dock__btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
 }
 
 .dock__sep {
@@ -265,32 +279,6 @@
   height: 24px;
   margin: 0 4px;
   background: var(--glass-border);
-}
-
-.meter {
-  position: relative;
-  width: 88px;
-  height: 28px;
-  border-radius: 9px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.12);
-  display: grid;
-  place-items: center;
-}
-
-.meter__fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: linear-gradient(90deg, rgba(255, 201, 60, 0.25), rgba(255, 201, 60, 0.6));
-  transition: width 0.15s linear;
-}
-
-.meter span {
-  position: relative;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 12px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Footer text ---------- */
@@ -427,7 +415,7 @@ kbd {
 
 @media (prefers-reduced-motion: reduce) {
   .bg-glow,
-  .dock__btn--on svg {
+  .dock__btn--spin svg {
     animation: none;
   }
 }

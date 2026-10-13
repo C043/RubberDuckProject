@@ -1,3 +1,5 @@
+export type MotionMode = "spin" | "follow" | null;
+
 export const MIN_DISTANCE = 2.5;
 export const MAX_DISTANCE = 10;
 
