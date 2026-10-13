@@ -4,6 +4,8 @@ import { CameraControls, useProgress } from "@react-three/drei";
 import { Scene } from "./components/Scene";
 import { getDefaultPosition, MAX_DISTANCE, MIN_DISTANCE, type MotionMode } from "./camera";
 import { THEMES } from "./themes";
+import { MODELS, thumbnailUrl } from "./models";
+import { ModelPicker } from "./components/ModelPicker";
 import "./App.css";
 
 const ZOOM_STEP = 1;
@@ -24,9 +26,13 @@ function App() {
   const controlsRef = useRef<CameraControls | null>(null);
   const [mode, setMode] = useState<MotionMode>("spin");
   const [themeId, setThemeId] = useState(THEMES[0].id);
+  const [modelId, setModelId] = useState(MODELS[0].id);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [defaultPosition] = useState(getDefaultPosition);
   const [distance, setDistance] = useState(() => Math.hypot(...defaultPosition));
   const theme = THEMES.find((t) => t.id === themeId) ?? THEMES[0];
+  const modelIndex = Math.max(0, MODELS.findIndex((m) => m.id === modelId));
+  const model = MODELS[modelIndex];
 
   const onZoomChange = useCallback((d: number) => {
     setDistance((prev) => (Math.abs(prev - d) > 0.01 ? d : prev));
@@ -45,6 +51,13 @@ function App() {
 
   const stopModes = useCallback(() => setMode(null), []);
 
+  const cycleModel = useCallback((dir: 1 | -1) => {
+    setModelId((current) => {
+      const i = MODELS.findIndex((m) => m.id === current);
+      return MODELS[(i + dir + MODELS.length) % MODELS.length].id;
+    });
+  }, []);
+
   const reset = useCallback(() => {
     setMode(null);
     controlsRef.current?.setLookAt(...getDefaultPosition(), 0, 0, 0, true);
@@ -52,10 +65,14 @@ function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (pickerOpen) return;
       if (e.target instanceof HTMLElement && e.target.closest("button, input")) return;
       if (e.key === "+" || e.key === "=") zoom(1);
       else if (e.key === "-" || e.key === "_") zoom(-1);
       else if (e.key.toLowerCase() === "r") reset();
+      else if (e.key === "[") cycleModel(-1);
+      else if (e.key === "]") cycleModel(1);
+      else if (e.key.toLowerCase() === "m") setPickerOpen(true);
       else if (e.key === " ") {
         e.preventDefault();
         toggleMode("spin");
@@ -64,7 +81,7 @@ function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [zoom, reset, toggleMode]);
+  }, [zoom, reset, toggleMode, cycleModel, pickerOpen]);
 
   const atMinZoom = distance >= MAX_DISTANCE - 0.01;
   const atMaxZoom = distance <= MIN_DISTANCE + 0.01;
@@ -83,6 +100,7 @@ function App() {
         <Scene
           controlsRef={controlsRef}
           mode={mode}
+          model={model}
           theme={theme}
           onZoomChange={onZoomChange}
           onDragStart={stopModes}
@@ -91,11 +109,31 @@ function App() {
 
       <Loader />
 
+      <ModelPicker open={pickerOpen} current={model} onSelect={setModelId} onClose={() => setPickerOpen(false)} />
+
       <header className="hud hud--top">
         <div className="brand">
           <span className="brand__dot" />
-          <span className="brand__kicker">Specimen No. 001</span>
+          <span className="brand__kicker">Specimen No. {String(modelIndex + 1).padStart(3, "0")}</span>
         </div>
+        <button
+          className="picker"
+          onClick={() => setPickerOpen(true)}
+          aria-haspopup="dialog"
+          title="Choose duck (M)"
+        >
+          <img className="picker__thumb" src={thumbnailUrl(model)} alt="" width={28} height={28} />
+          <span className="picker__label">
+            <span className="sr-only">Duck model: </span>
+            {model.title}
+          </span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="4" y="4" width="6" height="6" rx="1.5" />
+            <rect x="14" y="4" width="6" height="6" rx="1.5" />
+            <rect x="4" y="14" width="6" height="6" rx="1.5" />
+            <rect x="14" y="14" width="6" height="6" rx="1.5" />
+          </svg>
+        </button>
         <div className="themes" role="radiogroup" aria-label="Scene theme">
           {THEMES.map((t) => (
             <button
@@ -124,7 +162,7 @@ function App() {
 
       <footer className="hud hud--bottom">
         <p className="hint">
-          <kbd>Drag</kbd> rotate · <kbd>Scroll</kbd> zoom · <kbd>F</kbd> follow · <kbd>R</kbd> reset
+          <kbd>Drag</kbd> rotate · <kbd>Scroll</kbd> zoom · <kbd>F</kbd> follow · <kbd>M</kbd> ducks · <kbd>R</kbd> reset
         </p>
 
         <div className="dock">
@@ -163,10 +201,10 @@ function App() {
 
         <p className="credit">
           Model by{" "}
-          <a href="https://sketchfab.com/3d-models/rubber-duck-7eb15f3c897049f8ba35f8f56f081dff" target="_blank" rel="noreferrer">
-            Albert Gregl
+          <a href={model.source} target="_blank" rel="noreferrer">
+            {model.author}
           </a>{" "}
-          · CC BY-NC 4.0
+          · {model.license}
         </p>
       </footer>
     </div>

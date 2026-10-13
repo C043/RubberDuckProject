@@ -1,17 +1,23 @@
-import { useLayoutEffect, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Center, Float, useGLTF } from "@react-three/drei";
+import { Float, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { FittedModel } from "./FittedModel";
+import { MODELS, type DuckModel } from "../models";
 
-const MODEL_URL = "/models/rubber_duck.glb";
 const ray = new THREE.Vector3();
 const lookTarget = new THREE.Vector3();
 const aim = new THREE.Object3D();
 const REST = new THREE.Quaternion();
+const UP = new THREE.Vector3(0, 1, 0);
+const followGoal = new THREE.Quaternion();
 
-export function Duck({ follow }: { follow: boolean }) {
-  const { scene } = useGLTF(MODEL_URL);
+export function Duck({ model, follow }: { model: DuckModel; follow: boolean }) {
   const groupRef = useRef<THREE.Group>(null);
+  const beakTurn = useMemo(
+    () => new THREE.Quaternion().setFromAxisAngle(UP, THREE.MathUtils.degToRad(model.followYaw ?? 0)),
+    [model.followYaw],
+  );
 
   // Face the cursor as if it hovered between the camera and the duck.
   // Eases back to rest when following is off.
@@ -22,38 +28,21 @@ export function Duck({ follow }: { follow: boolean }) {
     if (follow) {
       ray.set(pointer.x, pointer.y, 0.5).unproject(camera).sub(camera.position).normalize();
       lookTarget.copy(camera.position).addScaledVector(ray, camera.position.length() * 0.5);
-      // lookAt aims the local +Z axis, which is where the beak points.
+      // lookAt aims the local +Z axis; beakTurn first brings the beak onto it.
       aim.lookAt(lookTarget);
-      goal = aim.quaternion;
+      goal = followGoal.copy(aim.quaternion).multiply(beakTurn);
     }
     group.quaternion.slerp(goal, 0.08);
   });
 
-  // The Sketchfab export marks the material as alpha-blended, which causes
-  // depth-sorting artifacts on an opaque toy. Force it opaque.
-  useLayoutEffect(() => {
-    scene.traverse((child) => {
-      const mesh = child as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      mesh.castShadow = true;
-      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      materials.forEach((mat) => {
-        mat.transparent = false;
-        mat.depthWrite = true;
-        mat.needsUpdate = true;
-      });
-    });
-  }, [scene]);
-
   return (
     <group ref={groupRef}>
       <Float speed={1.6} rotationIntensity={0.15} floatIntensity={0.4} floatingRange={[-0.05, 0.05]}>
-        <Center scale={0.8}>
-          <primitive object={scene} />
-        </Center>
+        <FittedModel model={model} />
       </Float>
     </group>
   );
 }
 
-useGLTF.preload(MODEL_URL);
+// Only the default model is preloaded; the others are fetched on demand.
+useGLTF.preload(MODELS[0].url);
